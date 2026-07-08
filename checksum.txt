@@ -1,77 +1,29 @@
-Here are speaker notes you can use during the presentation. This explanation is aimed at a technical client and should take about **3–4 minutes**.
+Here's a concise **2–3 minute technical explanation** suitable for presenting to a client.
 
 ---
 
-# Introduction
+## Speaker Notes (2–3 Minutes)
 
-> "This slide presents the two orchestration approaches we evaluated for executing dbt transformations on Databricks. Both approaches are technically feasible, but we recommend Option 1 because it provides better separation of responsibilities, easier operations, and improved scalability for enterprise deployments."
+> "This slide compares the two orchestration approaches for executing dbt transformations on Databricks. Both approaches are technically feasible, but after evaluating scalability, operational overhead, and maintainability, we recommend Option 1."
 
----
+> "The process begins with the dbt project stored in Git. Every code change goes through the CI/CD pipeline, where the Databricks Asset Bundle packages the dbt project and deploys the Databricks Job consistently across Development, Staging, and Production environments."
 
-# CI/CD and Deployment (Top Section)
+### Option 1 – Recommended
 
-> "The process starts with the dbt project stored in Git. Whenever code is pushed or a Pull Request is created, the CI/CD pipeline performs code validation and deployment. Using Databricks Asset Bundles (DAB), the same Databricks Job definition is promoted consistently across Development, Staging, and Production environments."
+> "In the recommended approach, Airflow is used purely for orchestration. It schedules the workflow and triggers a pre-deployed Databricks Job using the DatabricksRunNowOperator."
 
----
+> "The Databricks Job starts a dedicated Job Cluster, where dbt Core executes commands such as `dbt deps` and `dbt build`. During execution, dbt compiles the models, resolves dependencies, and generates SQL. Using the dbt-databricks adapter, the compiled SQL is submitted to the Databricks SQL Warehouse, which executes the queries and materializes the Silver and Gold models in Unity Catalog."
 
-# Option 1 – Recommended Architecture
+> "This architecture clearly separates orchestration from execution, minimizes Airflow maintenance, provides consistent deployments through Databricks Asset Bundles, and allows Databricks to manage compute scaling and dependencies."
 
-> "In the recommended approach, Airflow is responsible only for orchestration. It schedules the workflow and triggers a pre-deployed Databricks Job using the DatabricksRunNowOperator."
+### Option 2 – Alternative
 
-> "The actual dbt execution happens inside a dedicated Databricks Job Cluster. This compute runs the dbt CLI commands such as `dbt deps` and `dbt build`, compiles the models, resolves dependencies, and submits the generated SQL to the Databricks SQL Warehouse through the dbt-databricks adapter."
+> "In the second approach, Airflow executes dbt directly using BashOperator or DbtTaskGroup. Here, dbt Core and the dbt-databricks adapter must be installed and maintained on the Airflow workers. The Airflow worker compiles the dbt models and submits the SQL to the Databricks SQL Warehouse for execution."
 
-> "The SQL Warehouse executes the SQL and reads or writes data managed in Unity Catalog."
+> "While this approach works, it increases operational overhead because Airflow must manage dbt versions, adapters, dependencies, and authentication. It is also more difficult to scale and maintain consistently across environments."
 
-### Why we recommend this approach
+### Recommendation
 
-> "This architecture cleanly separates orchestration from execution. Airflow remains lightweight because it doesn't need to manage dbt installations or dependencies."
+> "For the Holcim implementation, we recommend Option 1 because it follows Databricks best practices. Airflow focuses only on orchestration, while Databricks handles dbt execution and compute management. This provides better scalability, simpler operations, consistent deployments, and easier long-term maintenance for enterprise workloads."
 
-> "Since Databricks Asset Bundles package both the dbt project and the Databricks Job definition, the same deployment pattern is consistently promoted across Development, Staging, and Production."
-
-> "Because the execution environment is fully managed inside Databricks, cluster configuration, libraries, authentication, and scaling are centrally managed, reducing operational overhead."
-
-> "This approach also improves reliability, since dbt executes using dedicated Databricks compute optimized for transformation workloads."
-
----
-
-# Data Flow
-
-> "The transformations follow the Medallion architecture. Bronze contains the raw ingested data. Databricks performs the initial Bronze-to-Silver transformations, while dbt is responsible for creating curated Silver and business-ready Gold models. Unity Catalog governs access, metadata, and lineage across these layers."
-
----
-
-# Option 2 – Alternative Approach
-
-> "The second approach executes dbt directly on the Airflow workers using BashOperator or DbtTaskGroup."
-
-> "In this case, Airflow must host dbt Core, the dbt-databricks adapter, all required Python packages, and manage authentication to Databricks."
-
-> "The Airflow worker compiles the dbt project and submits the compiled SQL to the Databricks SQL Warehouse for execution."
-
-### Challenges
-
-> "Although this approach works, it introduces additional operational responsibilities. Every Airflow worker must maintain the correct dbt version, adapters, and dependencies."
-
-> "Any upgrade to dbt or supporting libraries must be coordinated across the Airflow environment, increasing maintenance effort."
-
-> "Scaling also becomes more difficult because Airflow is responsible for both orchestration and execution."
-
-> "For these reasons, this approach is generally better suited for smaller implementations or organizations that already have a mature Airflow-based dbt platform."
-
----
-
-# Final Recommendation
-
-> "For the Holcim implementation, we recommend Option 1. It aligns with Databricks best practices by keeping orchestration in Airflow while delegating execution to Databricks Jobs. This provides better scalability, simpler operations, environment consistency through Databricks Asset Bundles, and easier long-term maintenance."
-
----
-
-## Questions you may be asked
-
-**Q: Why are there two computes in Option 1?**
-
-> "Airflow is not a compute engine; it only orchestrates workflows. The Databricks Job Cluster provides the compute required to execute dbt commands. The SQL Warehouse then executes the SQL generated by dbt. Separating orchestration, dbt execution, and SQL execution allows each component to scale independently."
-
-**Q: Why not execute dbt directly on Airflow?**
-
-> "Running dbt on Airflow requires managing dbt installations, adapters, libraries, and authentication on every Airflow worker. Using Databricks Jobs shifts this responsibility to Databricks, making the platform easier to operate and scale."
+This explanation fits comfortably within **2–3 minutes** and covers the architecture, execution flow, comparison, and recommendation at the right level for a technical audience.
