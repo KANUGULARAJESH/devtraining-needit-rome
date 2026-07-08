@@ -1,29 +1,81 @@
-Here's a concise **2–3 minute technical explanation** suitable for presenting to a client.
+Below are speaker notes that fit within **2–3 minutes** and are appropriate for a technical client presentation.
 
 ---
 
-## Speaker Notes (2–3 Minutes)
+# Speaker Notes – CI/CD Flow
 
-> "This slide compares the two orchestration approaches for executing dbt transformations on Databricks. Both approaches are technically feasible, but after evaluating scalability, operational overhead, and maintainability, we recommend Option 1."
+## Introduction
 
-> "The process begins with the dbt project stored in Git. Every code change goes through the CI/CD pipeline, where the Databricks Asset Bundle packages the dbt project and deploys the Databricks Job consistently across Development, Staging, and Production environments."
+> "This slide illustrates the end-to-end CI/CD process we propose for managing dbt transformations on Databricks. The objective is to ensure every code change is automatically validated, reviewed, and promoted through controlled environments before deployment to production."
 
-### Option 1 – Recommended
+---
 
-> "In the recommended approach, Airflow is used purely for orchestration. It schedules the workflow and triggers a pre-deployed Databricks Job using the DatabricksRunNowOperator."
+## Step 1 – Open Pull Request
 
-> "The Databricks Job starts a dedicated Job Cluster, where dbt Core executes commands such as `dbt deps` and `dbt build`. During execution, dbt compiles the models, resolves dependencies, and generates SQL. Using the dbt-databricks adapter, the compiled SQL is submitted to the Databricks SQL Warehouse, which executes the queries and materializes the Silver and Gold models in Unity Catalog."
+> "The process begins when a developer creates or modifies dbt models, tests, or macros in a feature branch. Once the changes are complete, a Pull Request is raised. This automatically triggers the CI pipeline, where an isolated CI schema is created so validation can be performed without impacting shared development environments."
 
-> "This architecture clearly separates orchestration from execution, minimizes Airflow maintenance, provides consistent deployments through Databricks Asset Bundles, and allows Databricks to manage compute scaling and dependencies."
+---
 
-### Option 2 – Alternative
+## Step 2 – Quality & Validation
 
-> "In the second approach, Airflow executes dbt directly using BashOperator or DbtTaskGroup. Here, dbt Core and the dbt-databricks adapter must be installed and maintained on the Airflow workers. The Airflow worker compiles the dbt models and submits the SQL to the Databricks SQL Warehouse for execution."
+> "The first stage focuses on code quality. SQLFluff validates SQL formatting, naming conventions, and coding standards. We also validate the dbt project configuration. If any linting or validation fails, the CI pipeline stops immediately, preventing poor-quality code from progressing further."
 
-> "While this approach works, it increases operational overhead because Airflow must manage dbt versions, adapters, dependencies, and authentication. It is also more difficult to scale and maintain consistently across environments."
+---
 
-### Recommendation
+## Step 3 – Slim CI Build
 
-> "For the Holcim implementation, we recommend Option 1 because it follows Databricks best practices. Airflow focuses only on orchestration, while Databricks handles dbt execution and compute management. This provides better scalability, simpler operations, consistent deployments, and easier long-term maintenance for enterprise workloads."
+> "After the quality checks pass, we execute a Slim CI build. dbt compares the current project with the latest production `manifest.json` and identifies only the modified models along with their downstream dependencies. It then executes `dbt build --select state:modified+`, which builds only the impacted models and automatically runs their associated dbt tests. This significantly reduces CI execution time compared to a full project build."
 
-This explanation fits comfortably within **2–3 minutes** and covers the architecture, execution flow, comparison, and recommendation at the right level for a technical audience.
+---
+
+## Step 4 – Review
+
+> "Once the automated validations succeed, the Pull Request undergoes peer review. The reviewers validate the transformation logic, lineage impact, and CI results before approving the code for promotion."
+
+---
+
+## Step 5 – Merge
+
+> "After approval, the Pull Request is merged into the integration branch. This generates a versioned deployment artifact and prepares the code for deployment into the next environment."
+
+---
+
+## Step 6 – Deploy
+
+> "Finally, the deployment pipeline deploys the approved dbt project to the target Databricks environment. A production `dbt build` materializes the Silver and Gold models in Unity Catalog while publishing metadata, lineage, and execution logs for governance and traceability."
+
+---
+
+## Repository Versioning
+
+> "We follow semantic versioning for the centralized dbt repository. Major versions represent breaking changes, minor versions introduce new features, and patch versions capture bug fixes. This provides controlled and traceable releases."
+
+---
+
+## Git Branching Strategy
+
+> "Our Git strategy follows Feature → Development → SIT → Master. Every commit to a feature branch triggers the CI pipeline. Once the code passes validation and peer review, it is promoted sequentially through Development, SIT, and finally Production, ensuring controlled and governed releases."
+
+---
+
+## Closing
+
+> "Overall, this CI/CD process combines automated quality checks, faster validation using Slim CI, controlled code reviews, versioned releases, and automated deployment, providing a reliable and scalable framework for managing dbt transformations on Databricks."
+
+---
+
+### One correction I'd recommend on your slide
+
+In **Step 2**, replace:
+
+> **"Validates dbt project compilation"**
+
+with:
+
+> **"Validates dbt project configuration"**
+
+or
+
+> **"Validates dbt project structure and dependencies"**
+
+This is more accurate because the actual compilation happens during the `dbt build` in **Step 3**. This small change will make the slide technically stronger.
