@@ -1,81 +1,73 @@
-Below are speaker notes that fit within **2–3 minutes** and are appropriate for a technical client presentation.
+Here are concise **2–3 minute speaker notes** for this slide that you can present to a technical client.
 
 ---
 
-# Speaker Notes – CI/CD Flow
+# Speaker Notes – SQLFluff Linting for dbt on Databricks
 
 ## Introduction
 
-> "This slide illustrates the end-to-end CI/CD process we propose for managing dbt transformations on Databricks. The objective is to ensure every code change is automatically validated, reviewed, and promoted through controlled environments before deployment to production."
+> "This slide explains how we implement SQLFluff as part of our dbt development lifecycle on Databricks. The objective is to enforce consistent SQL coding standards, detect issues early, and prevent poorly formatted SQL from reaching production."
 
 ---
 
-## Step 1 – Open Pull Request
+## Step 1 – Install Required Packages
 
-> "The process begins when a developer creates or modifies dbt models, tests, or macros in a feature branch. Once the changes are complete, a Pull Request is raised. This automatically triggers the CI pipeline, where an isolated CI schema is created so validation can be performed without impacting shared development environments."
-
----
-
-## Step 2 – Quality & Validation
-
-> "The first stage focuses on code quality. SQLFluff validates SQL formatting, naming conventions, and coding standards. We also validate the dbt project configuration. If any linting or validation fails, the CI pipeline stops immediately, preventing poor-quality code from progressing further."
+> "The first step is to install SQLFluff, the dbt templater, and the dbt-databricks adapter. The dbt templater allows SQLFluff to correctly understand dbt-specific Jinja syntax, while the Databricks adapter ensures SQL is parsed using the Databricks SQL dialect."
 
 ---
 
-## Step 3 – Slim CI Build
+## Step 2 – Configure SQLFluff
 
-> "After the quality checks pass, we execute a Slim CI build. dbt compares the current project with the latest production `manifest.json` and identifies only the modified models along with their downstream dependencies. It then executes `dbt build --select state:modified+`, which builds only the impacted models and automatically runs their associated dbt tests. This significantly reduces CI execution time compared to a full project build."
-
----
-
-## Step 4 – Review
-
-> "Once the automated validations succeed, the Pull Request undergoes peer review. The reviewers validate the transformation logic, lineage impact, and CI results before approving the code for promotion."
+> "Next, we configure the `.sqlfluff` file at the project root. Here we specify the dbt templater, Databricks dialect, project directory, profiles directory, and the SQL formatting and linting rules that will be enforced across the project."
 
 ---
 
-## Step 5 – Merge
+## Step 3 – Ignore Generated Files
 
-> "After approval, the Pull Request is merged into the integration branch. This generates a versioned deployment artifact and prepares the code for deployment into the next environment."
-
----
-
-## Step 6 – Deploy
-
-> "Finally, the deployment pipeline deploys the approved dbt project to the target Databricks environment. A production `dbt build` materializes the Silver and Gold models in Unity Catalog while publishing metadata, lineage, and execution logs for governance and traceability."
+> "We configure a `.sqlfluffignore` file to exclude folders such as `target` and `dbt_packages`, since these are generated automatically by dbt. Optionally, macros can also be excluded if they are not intended for linting."
 
 ---
 
-## Repository Versioning
+## Step 4 – Local Linting
 
-> "We follow semantic versioning for the centralized dbt repository. Major versions represent breaking changes, minor versions introduce new features, and patch versions capture bug fixes. This provides controlled and traceable releases."
-
----
-
-## Git Branching Strategy
-
-> "Our Git strategy follows Feature → Development → SIT → Master. Every commit to a feature branch triggers the CI pipeline. Once the code passes validation and peer review, it is promoted sequentially through Development, SIT, and finally Production, ensuring controlled and governed releases."
+> "Developers can run `sqlfluff lint` locally to identify SQL quality issues before committing their code. If formatting issues are detected, `sqlfluff fix` can automatically correct many of them, reducing manual effort."
 
 ---
 
-## Closing
+## Step 5 – GitHub Actions Integration
 
-> "Overall, this CI/CD process combines automated quality checks, faster validation using Slim CI, controlled code reviews, versioned releases, and automated deployment, providing a reliable and scalable framework for managing dbt transformations on Databricks."
+> "When code is pushed or a Pull Request is created, GitHub Actions automatically executes SQLFluff. This ensures every code change is validated consistently without relying solely on local developer checks."
 
 ---
 
-### One correction I'd recommend on your slide
+## Step 6 – Optional Pre-commit Hook
 
-In **Step 2**, replace:
+> "As an additional safeguard, developers can configure a pre-commit hook. This runs SQLFluff before the local Git commit is created, providing immediate feedback and preventing common formatting issues from entering the repository."
 
-> **"Validates dbt project compilation"**
+---
 
-with:
+## Step 7 – CI Quality Gate
 
-> **"Validates dbt project configuration"**
+> "Finally, SQLFluff acts as a CI quality gate. If linting fails, the pipeline returns a non-zero exit code, the Pull Request is blocked, and the developer must resolve the issues before the code can proceed to the Slim CI build and merge."
 
-or
+---
 
-> **"Validates dbt project structure and dependencies"**
+## CI Pipeline (Right Side)
 
-This is more accurate because the actual compilation happens during the `dbt build` in **Step 3**. This small change will make the slide technically stronger.
+> "The flow on the right summarizes the process. A developer modifies a dbt model, optionally triggers a local pre-commit check, and pushes the changes. GitHub Actions runs SQLFluff automatically. If linting succeeds, the pipeline proceeds to the Slim CI build, where only the modified models and their downstream dependencies are built and tested. Once all validations pass, the Pull Request can be merged."
+
+---
+
+## Outcome
+
+> "By integrating SQLFluff into our development workflow, we achieve standardized SQL formatting, automated Pull Request quality checks, early detection of SQL issues, and reduced code review effort. This helps improve code quality and maintain consistency across all dbt models."
+
+---
+
+### Expected client question
+
+**Q: Why use SQLFluff if `dbt build` already runs in CI?**
+
+**Answer:**
+
+> "`dbt build` validates whether the models execute successfully, whereas SQLFluff checks coding standards, formatting, naming conventions, and SQL best practices before execution. Using both ensures we maintain high code quality as well as functional correctness."
